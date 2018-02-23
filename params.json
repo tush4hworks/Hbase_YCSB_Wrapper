@@ -6,7 +6,7 @@
       "user":"admin",
       "password":"admin"
       },
-    "zeppelin":"true",
+    "zeppelin":"false",
     "notebook":{
       "host":"localhost:9995",
       "user":"user1",
@@ -29,12 +29,12 @@
             }
           },
           "runconf":{
-              "records":300000000,
-              "operations":10000000,
-              "runthreads":400,
-              "loadthreads":40
+              "records":"300000000",
+              "operations":"10000000",
+              "runthreads":"400",
+              "loadthreads":"40"
             },
-          "system":[],
+          "system":["cp /etc/hbase/conf/hbase-site.xml hbase10/conf"],
           "restart": {
             "components": [
             ],
@@ -50,12 +50,12 @@
               "hbase.hregion.memstore.block.multiplier": "8"
             }
           },
-          "system":[],
+          "system":["cp /etc/hbase/conf/hbase-site.xml /hbase10/conf"],
           "runconf":{
-            "records":300000000,
-              "operations":10000000,
-              "runthreads":400,
-              "loadthreads":40
+            "records":"300000000",
+              "operations":"10000000",
+              "runthreads":"400",
+              "loadthreads":"40"
             },
           "restart": {
             "components": [

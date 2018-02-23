@@ -30,6 +30,6 @@ class hbaseUtil:
 		if runType.lower()=="load":
 			return "./bin/ycsb load hbase10 -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hivetrials[setting]["records"]+" -threads "+self.hivetrials[setting]["loadthreads"])
 		elif runType.lower()=="run":
-			return "./bin/ycsb run hbase10 -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hivetrials[setting]["records"]+" -p operationcount="+self.hivetrials[setting]['operations']+" -threads "+self.hivetrials[setting]["loadthreads"]
+			return "./bin/ycsb run hbase10 -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hivetrials[setting]["records"]+" -p operationcount="+self.hivetrials[setting]['operations']+" -threads "+self.hivetrials[setting]["runthreads"]
 
 			

@@ -113,8 +113,6 @@ class controls:
 				if not(currSet) or not(setting==currSet):
 					force_restart=False
 					updateZeppelin=runZep
-					if setting in self.hbase.sysMod.keys():
-						self.sysConf(self.hbase.sysMod[setting],setting)
 					if setting in self.hbase.viaAmbari.keys():
 						if self.rollBack:
 							self.logger.warn('+ Rolling back to base version before making changes for setting '+currSet+ '+')
@@ -122,7 +120,9 @@ class controls:
 							self.logger.info('- Rolled back to base version before making changes for setting '+currSet+ '-')
 							force_restart=True
 						self.logger.info('+ Comparing with existing configurations via ambari for '+setting+' +')
-						self.modifySettingsAndRestart(self.hbase.viaAmbari[setting],self.hbase.restarts[setting]['services'],self.base.restarts[setting]['components'],force_restart)
+						self.modifySettingsAndRestart(self.hbase.viaAmbari[setting],self.hbase.restarts[setting]['services'],self.hbase.restarts[setting]['components'],force_restart)
+					if setting in self.hbase.sysMod.keys():
+						self.sysConf(self.hbase.sysMod[setting],setting)
 					self.logger.info('Starting execution with below configurations for '+setting)
 					for toPrint in self.printer:
 						self.logger.info(json.dumps(self.modconf.getConfig(toPrint),indent=4,sort_keys=True))
@@ -132,6 +132,9 @@ class controls:
 				self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
 				for i in xrange(numRuns):
 					self.runCmd(HbaseRunCmd,setting,workload,'load',str(i))
+				self.logger.info('+Dropping/Recreating Table For Next Run+')
+				self.runCmd('hbase shell ./hbase_truncate')
+				self.logger.info('-Dropped/Recreated Table For Next Run-')
 				self.logger.info('- FINISHED EXECUTION '+' '.join([workload,setting])+' -')
 				if updateZeppelin:
 					self.updateNote()
