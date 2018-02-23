@@ -8,13 +8,10 @@ import threading
 import hbaseUtil
 import logging
 import modifyConfig
-import analyzeResults
 import InputParser
 import notes
 import datetime
 import time
-import computeStats
-
 
 class controls:
 	
@@ -114,7 +111,7 @@ class controls:
 					force_restart=False
 					updateZeppelin=runZep
 					if setting in self.hbase.viaAmbari.keys():
-						if self.rollBack:
+						if currSet and self.rollBack:
 							self.logger.warn('+ Rolling back to base version before making changes for setting '+currSet+ '+')
 							self.modconf.rollBackConfig(self.rollBack_service,self.base_version) 
 							self.logger.info('- Rolled back to base version before making changes for setting '+currSet+ '-')
@@ -133,7 +130,7 @@ class controls:
 				for i in xrange(numRuns):
 					self.runCmd(HbaseRunCmd,setting,workload,'load',str(i))
 				self.logger.info('+Dropping/Recreating Table For Next Run+')
-				self.runCmd('hbase shell ./hbase_truncate')
+				self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
 				self.logger.info('-Dropped/Recreated Table For Next Run-')
 				self.logger.info('- FINISHED EXECUTION '+' '.join([workload,setting])+' -')
 				if updateZeppelin:
@@ -179,7 +176,7 @@ class controls:
 			self.zepInputFile=zepInputFile
 			self.zepObj=notes.zepInt(host,user,password)
 
-if __name__=='__main__'
+if __name__=='__main__':
 	C=controls('params.json')
 	C.runTests(C.hbaseconfs,C.workloads,C.numRuns,C.runZep)
 	
