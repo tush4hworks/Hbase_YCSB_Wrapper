@@ -28,7 +28,7 @@
               "hbase.hregion.memstore.block.multiplier": "4"
             }
           },
-          "runConf":{
+          "runconf":{
               "records":300000000,
               "operations":10000000,
               "runthreads":400,
@@ -51,7 +51,7 @@
             }
           },
           "system":[],
-          "runConf":{
+          "runconf":{
             "records":300000000,
               "operations":10000000,
               "runthreads":400,
