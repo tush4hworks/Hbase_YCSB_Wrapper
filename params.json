@@ -41,7 +41,7 @@
             "services": ["HBASE"]
           }
         },
-        "name": "4XBeforeShuffle"
+        "name": "4XBeforeFlush"
       },
       {
         "config": {
@@ -50,7 +50,7 @@
               "hbase.hregion.memstore.block.multiplier": "8"
             }
           },
-          "system":["cp /etc/hbase/conf/hbase-site.xml /hbase10/conf"],
+          "system":["cp /etc/hbase/conf/hbase-site.xml hbase10/conf"],
           "runconf":{
             "records":"300000000",
               "operations":"10000000",
@@ -63,7 +63,7 @@
             "services": ["HBASE"]
           }
         },
-        "name": "8XBeforeShuffle"
+        "name": "8XBeforeFlush"
       }
     ]
   }
