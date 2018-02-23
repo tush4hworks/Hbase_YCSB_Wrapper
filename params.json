@@ -1,0 +1,70 @@
+{
+  "wrap": {
+    "cluster":{
+      "host":"localhost",
+      "clustername":"DPH",
+      "user":"admin",
+      "password":"admin"
+      },
+    "zeppelin":"true",
+    "notebook":{
+      "host":"localhost:9995",
+      "user":"user1",
+      "password":"user1",
+      "note":"300GBSparkSql",
+      "zepInputFile":"zepin.csv"
+      },
+    "numRuns": 1,
+    "printer":["hbase-site"],
+    "enableRollBack":"true",
+    "rollBackService":"HBASE",
+    "base_version":1,
+    "workloads":["workloada","workloadb"],
+    "settings": [
+      {
+        "config": {
+          "ambari": {
+            "hbase-site": {
+              "hbase.hregion.memstore.block.multiplier": "4"
+            }
+          },
+          "runConf":{
+              "records":300000000,
+              "operations":10000000,
+              "runthreads":400,
+              "loadthreads":40
+            },
+          "system":[],
+          "restart": {
+            "components": [
+            ],
+            "services": ["HBASE"]
+          }
+        },
+        "name": "4XBeforeShuffle"
+      },
+      {
+        "config": {
+          "ambari": {
+            "hbase-site": {
+              "hbase.hregion.memstore.block.multiplier": "8"
+            }
+          },
+          "system":[],
+          "runConf":{
+            "records":300000000,
+              "operations":10000000,
+              "runthreads":400,
+              "loadthreads":40
+            },
+          "restart": {
+            "components": [
+            ],
+            "services": ["HBASE"]
+          }
+        },
+        "name": "8XBeforeShuffle"
+      }
+    ]
+  }
+}
