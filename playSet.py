@@ -22,6 +22,7 @@ class controls:
 		logging.getLogger("requests").setLevel(logging.WARNING)
 		self.logger=logging.getLogger(__name__)
 		self.fetchParams(jsonFile)
+		self.epochdict=defaultdict(lambda:['NA','NA'])
 
 	def getDateTime(self,epochT=False):
 		if epochT:
@@ -59,13 +60,36 @@ class controls:
 		"""Wrapper to run shell"""
 		try:
 			self.logger.info('+ Executing command '+cmd)
-			result=subprocess.check_output(cmd+'>'+'History/'+'_'.join([setting,workload,runType,run,self.getDateTime()],stderr=subprocess.STDOUT,shell=True)
+			startEpoch=startEpoch=str(int(time.time()*1000))
+			result=subprocess.check_output(cmd+'>'+'History/'+'_'.join([setting,workload,runType,run,self.getDateTime()],stderr=subprocess.STDOUT,shell=True))
+			endEpoch=str(int(time.time()*1000))
+			self.epochdict[workload]=[startEpoch,endEpoch]
 			self.logger.info('- Finished executing command '+cmd)
 		except Exception as e:
 			self.logger.error('- Finished executing command with exception '+cmd)
+			endEpoch=str(int(time.time()*1000))
+			self.epochdict[workload]=[startEpoch,endEpoch]
 			if hasattr(e,'output'):
 				with open('History/'+'_'.join([setting,workload,runType,run,self.getDateTime()]),'w+') as f:
 					f.write(e.output)
+
+	def addResourceStats(self,epochdict):
+		cstat=collect_metrics.getQueryMetrics(self.metricsHost,self.metricsPort)
+		for workload in epochdict.keys():
+			try:
+				self.logger.info('+ Collecting stats for workload '+workload)
+				for key in self.collection.keys():
+					cstat.fetch_stats(workload,key,self.collection[key]['metrics'],epochdict[workload][0],epochdict[workload][1],self.collection[key]['dumpfile'],self.collection[key]['hostname'],self.collection[key]['precision'],self.collection[key]['appId'])
+				self.logger.info('- Collected stats for workload '+workload)
+			except Exception as e:
+				self.logger.info(e.__str__())	
+
+	def statCollection(self,epochdict):
+		try:
+			t=threading.Thread(target=self.addResourceStats,args=[epochdict])
+			t.start()
+		except Exception as e:
+			self.logger.info(e.__str__())
 
 	def sysConf(self,cmds,setting):
 		for cmd in cmds:
@@ -163,6 +187,8 @@ class controls:
 		self.printer=iparse.printer()
 		self.rollBack=iparse.rollBack()
 		self.workloads=iparse.workloads()
+		self.collection=iparse.collectors()
+		self.metricsHost,self.metricsPort=iparse.ametrics()
 		if self.rollBack:
 			self.base_version=iparse.base_version()
 			self.rollBack_service=iparse.rollBack_service()
@@ -179,4 +205,5 @@ class controls:
 if __name__=='__main__':
 	C=controls('params.json')
 	C.runTests(C.hbaseconfs,C.workloads,C.numRuns,C.runZep)
+	C.statCollection(C.epochdict)
 	

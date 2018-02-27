@@ -14,6 +14,16 @@
       "note":"300GBSparkSql",
       "zepInputFile":"zepin.csv"
       },
+      "ambariMetrics":{
+    "collector":{
+      "host":{"metrics":"mem_free,disk_free,cpu_system,cpu_user,bytes_in,bytes_out,yarn.NodeManagerMetrics.ContainersRunning,yarn.QueueMetrics.Queue=root.AllocatedMB,yarn.QueueMetrics.Queue=root.AllocatedVCore",
+              "hostname":"dphslave%","dumpfile":"host_stats.csv"},
+      "service":{"metrics":"yarn.NodeManagerMetrics.ContainersRunning._SUM,yarn.QueueMetrics.Queue=root.AllocatedMB._SUM,yarn.QueueMetrics.Queue=root.AllocatedVCore._SUM"
+                ,"dumpfile":"service_stats.csv"}
+    },
+      "metricsHost":"localhost",
+      "metricsPort":"6188"
+    },
     "numRuns": 1,
     "printer":["hbase-site"],
     "enableRollBack":"true",
