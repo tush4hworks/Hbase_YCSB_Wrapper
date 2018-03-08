@@ -41,7 +41,7 @@ class controls:
 		with open('results_{}.csv'.format(self.getDateTime()),'w+') as f:
 			f.write(','.join([setting]+sorted(settings.keys())*self.numRuns)+'\n')
 			for setting in self.results.keys():
-				f.write(','.join([setting]+[','.join([setting[workload] for workload in sorted(self.results[setting].keys())])])+'\n')
+				f.write(','.join([setting,','.join([','.join(setting[workload]) for workload in sorted(self.results[setting].keys())])])+'\n')
 
 	def runCmd(self,cmd,setting,workload,runType,run):
 		"""Wrapper to run shell"""
