@@ -9,9 +9,9 @@ import hbaseUtil
 import logging
 import modifyConfig
 import InputParser
-import notes
 import datetime
 import time
+import collect_metrics
 
 class controls:
 	
@@ -23,48 +23,37 @@ class controls:
 		self.logger=logging.getLogger(__name__)
 		self.fetchParams(jsonFile)
 		self.epochdict=defaultdict(lambda:['NA','NA'])
+		self.results=defaultdict(lambda:defaultdict(lambda:[]))
 
 	def getDateTime(self,epochT=False):
 		if epochT:
 			return str(int(time.time()))
 		return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
+	def collectResults(self,runlog,setting,workload,run):
+		try:
+			with open(runlog,'r+') as f:
+				self.results[setting][workload].append('\n'.join(f.readlines()[:19]))
+		except Exception as e:
+			self.logger.info('- Exception in collecting results')
 
-	def toZeppelinAndTrigger(self):
-		try:
-			subprocess.check_output('hadoop fs -rm /tmp/'+self.zepInputFile,stderr=subprocess.STDOUT,shell=True)
-		except Exception as e:
-			self.logger.info(e.__str__())
-		try:
-			with open(self.zepInputFile,'w+') as f:
-				for db in self.results.keys():
-					for ql in self.results[db].keys():
-						for setting in self.results[db][ql].keys():
-							for i in range(len(self.results[db][ql][setting])):
-								f.write(','.join([ql,setting,str(i+1),str(self.results[db][ql][setting][i])
-									])+'\n')
-		except Exception as e:
-			self.logger.info(e.__str__())
-		try:			
-			subprocess.check_output('hadoop fs -put '+self.zepInputFile+' /tmp',stderr=subprocess.STDOUT,shell=True)
-		except Exception as e:
-			self.logger.info(e.__str__())
-		try:
-			self.zepObj.zepLogin()
-			self.zepObj.runParagraphs(self.zeppelinNote)
-		except Exception as e:
-			self.logger.info(e.__str__())
-	
+	def dumpResults(self):
+		with open('results_{}.csv'.format(self.getDateTime()),'w+') as f:
+			f.write(','.join([setting]+sorted(settings.keys())*self.numRuns)+'\n')
+			for setting in self.results.keys():
+				f.write(','.join([setting]+[','.join([setting[workload] for workload in sorted(self.results[setting].keys())])])+'\n')
 
 	def runCmd(self,cmd,setting,workload,runType,run):
 		"""Wrapper to run shell"""
 		try:
 			self.logger.info('+ Executing command '+cmd)
 			startEpoch=startEpoch=str(int(time.time()*1000))
-			result=subprocess.check_output(cmd+'>'+'History/'+'_'.join([setting,workload,runType,run,self.getDateTime()],stderr=subprocess.STDOUT,shell=True))
+			runlog='History/'+'_'.join([setting,workload,runType,run,self.getDateTime()])
+			result=subprocess.check_output(cmd+'>'+'History/'+runlog,stderr=subprocess.STDOUT,shell=True)
 			endEpoch=str(int(time.time()*1000))
 			self.epochdict[workload]=[startEpoch,endEpoch]
 			self.logger.info('- Finished executing command '+cmd)
+			self.collectResults(runlog)
 		except Exception as e:
 			self.logger.error('- Finished executing command with exception '+cmd)
 			endEpoch=str(int(time.time()*1000))
@@ -117,23 +106,14 @@ class controls:
 				self.modconf.restartComponent(component)
 				self.logger.info('- Restarted '+component+' -')
 
-	def updateNote(self):
-		try:
-			t=threading.Thread(target=self.toZeppelinAndTrigger,args=())
-			t.start()
-		except Exception as e:
-			self.logger.info(e.__str__())
-
-	def runTests(self,settings,workloads,numRuns,runZep=False):
+	def runTests(self,settings,workloads,numRuns):
 		"""Main entry function to run TPCDS suite"""
 		currSet=None
 		for setting,workload in list(itertools.product(settings,workloads)):
 			try:
-				updateZeppelin=False
 				self.logger.info('+ BEGIN EXECUTION '+' '.join([workload,setting])+' +')
 				if not(currSet) or not(setting==currSet):
 					force_restart=False
-					updateZeppelin=runZep
 					if setting in self.hbase.viaAmbari.keys():
 						if currSet and self.rollBack:
 							self.logger.warn('+ Rolling back to base version before making changes for setting '+currSet+ '+')
@@ -157,8 +137,6 @@ class controls:
 				self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
 				self.logger.info('-Dropped/Recreated Table For Next Run-')
 				self.logger.info('- FINISHED EXECUTION '+' '.join([workload,setting])+' -')
-				if updateZeppelin:
-					self.updateNote()
 			except Exception as e:
 				self.logger.error(e.__str__())
 				self.logger.warn('- FINISHED EXECUTION WITH EXCEPTION'+' '.join([workload,setting])+' -')
@@ -194,16 +172,11 @@ class controls:
 			self.rollBack_service=iparse.rollBack_service()
 		for setting in iparse.specified_settings():
 			self.addHbaseSettings(setting['name'],setting['config'])
-		self.runZep=False
-		if iparse.whetherZeppelin():
-			self.runZep=True
-			host,user,password,note,zepInputFile=iparse.noteInfo()
-			self.zeppelinNote=note
-			self.zepInputFile=zepInputFile
-			self.zepObj=notes.zepInt(host,user,password)
+	
 
 if __name__=='__main__':
 	C=controls('params.json')
-	C.runTests(C.hbaseconfs,C.workloads,C.numRuns,C.runZep)
+	C.runTests(C.hbaseconfs,C.workloads,C.numRuns)
 	C.statCollection(C.epochdict)
+	C.dumpResults()
 	
