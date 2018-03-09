@@ -1,5 +1,6 @@
 import sys
 import json
+from collections import defaultdict
 
 class parseInput:
 	def __init__(self,fileloc):
