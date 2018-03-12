@@ -30,7 +30,7 @@ class controls:
 			return str(int(time.time()))
 		return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-	def collectResults(self,runlog,setting,workload,run):
+	def collectResults(self,runlog):
 		try:
 			with open(runlog,'r+') as f:
 				self.results[setting][workload].append('\n'.join(f.readlines()[:19]))
