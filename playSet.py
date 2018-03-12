@@ -49,7 +49,7 @@ class controls:
 			self.logger.info('+ Executing command '+cmd)
 			startEpoch=startEpoch=str(int(time.time()*1000))
 			runlog='History/'+'_'.join([setting,workload,runType,run,self.getDateTime()])
-			result=subprocess.check_output(cmd+'>'+'History/'+runlog,stderr=subprocess.STDOUT,shell=True)
+			result=subprocess.check_output(cmd+' >'+runlog,stderr=subprocess.STDOUT,shell=True)
 			endEpoch=str(int(time.time()*1000))
 			self.epochdict[workload]=[startEpoch,endEpoch]
 			self.logger.info('- Finished executing command '+cmd)
@@ -132,7 +132,7 @@ class controls:
 				HbaseRunCmd=self.hbase.HbaseCommand(setting,workload,'run')
 				self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
 				for i in xrange(numRuns):
-					self.runCmd(HbaseRunCmd,setting,workload,'load',str(i))
+					self.runCmd(HbaseRunCmd,setting,workload,'run',str(i))
 				self.logger.info('+Dropping/Recreating Table For Next Run+')
 				self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
 				self.logger.info('-Dropped/Recreated Table For Next Run-')
