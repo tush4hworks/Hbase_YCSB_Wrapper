@@ -109,13 +109,21 @@ class controls:
 	def runTests(self,settings,workloads,numRuns):
 		"""Main entry function to run TPCDS suite"""
 		currSet=None
-		for setting,workload in list(itertools.product(settings,workloads)):
+		currload=None
+		for workload,setting in list(itertools.product(workloads,settings)):
 			try:
 				self.logger.info('+ BEGIN EXECUTION '+' '.join([workload,setting])+' +')
+				if not currload or not(currload==workload):
+					self.logger.info('+Dropping/Recreating Table For Next Run+')
+					self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
+					self.logger.info('-Dropped/Recreated Table For Next Run-')
+					HbaseLoadCmd=self.hbase.HbaseCommand(setting,workload,'load')
+					self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
+					currload=workload
 				if not(currSet) or not(setting==currSet):
 					force_restart=False
 					if setting in self.hbase.viaAmbari.keys():
-						if currSet and self.rollBack:
+						if self.rollBack:
 							self.logger.warn('+ Rolling back to base version before making changes for setting '+currSet+ '+')
 							self.modconf.rollBackConfig(self.rollBack_service,self.base_version) 
 							self.logger.info('- Rolled back to base version before making changes for setting '+currSet+ '-')
@@ -128,14 +136,9 @@ class controls:
 					for toPrint in self.printer:
 						self.logger.info(json.dumps(self.modconf.getConfig(toPrint),indent=4,sort_keys=True))
 					currSet=setting
-				HbaseLoadCmd=self.hbase.HbaseCommand(setting,workload,'load')
-				HbaseRunCmd=self.hbase.HbaseCommand(setting,workload,'run')
-				self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
+				HbaseRunCmd=self.hbase.HbaseCommand(setting,workload,'run')		
 				for i in xrange(numRuns):
-					self.runCmd(HbaseRunCmd,setting,workload,'run',str(i))
-				self.logger.info('+Dropping/Recreating Table For Next Run+')
-				self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
-				self.logger.info('-Dropped/Recreated Table For Next Run-')
+					self.runCmd(HbaseRunCmd,setting,workload,'run',str(i))		
 				self.logger.info('- FINISHED EXECUTION '+' '.join([workload,setting])+' -')
 			except Exception as e:
 				self.logger.error(e.__str__())
