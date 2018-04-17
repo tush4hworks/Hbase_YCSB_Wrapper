@@ -63,7 +63,7 @@ class controls:
 					f.write(e.output)
 
 	def addResourceStats(self,epochdict):
-		cstat=collect_metrics.getQueryMetrics(self.metricsHost,self.metricsPort)
+		cstat=collect_metrics.getQueryMetrics(self.metricsHost,self.metricsPort,self.logger)
 		for workload in epochdict.keys():
 			try:
 				self.logger.info('+ Collecting stats for workload '+workload)
