@@ -30,7 +30,7 @@ class controls:
 			return str(int(time.time()))
 		return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-	def collectResults(self,runlog):
+	def collectResults(self,runlog,setting,workload):
 		try:
 			with open(runlog,'r+') as f:
 				self.results[setting][workload].append('\n'.join(f.readlines()[:19]))
@@ -39,7 +39,6 @@ class controls:
 
 	def dumpResults(self):
 		with open('results_{}.csv'.format(self.getDateTime()),'w+') as f:
-			f.write(','.join([setting]+sorted(settings.keys())*self.numRuns)+'\n')
 			for setting in self.results.keys():
 				f.write(','.join([setting,','.join([','.join(setting[workload]) for workload in sorted(self.results[setting].keys())])])+'\n')
 
@@ -53,7 +52,7 @@ class controls:
 			endEpoch=str(int(time.time()*1000))
 			self.epochdict[workload]=[startEpoch,endEpoch]
 			self.logger.info('- Finished executing command '+cmd)
-			self.collectResults(runlog)
+			self.collectResults(runlog,setting,workload)
 		except Exception as e:
 			self.logger.error('- Finished executing command with exception '+cmd)
 			endEpoch=str(int(time.time()*1000))
@@ -63,7 +62,7 @@ class controls:
 					f.write(e.output)
 
 	def addResourceStats(self,epochdict):
-		cstat=collect_metrics.getQueryMetrics(self.metricsHost,self.metricsPort)
+		cstat=collect_metrics.getQueryMetrics(self.metricsHost,self.metricsPort,self.logger)
 		for workload in epochdict.keys():
 			try:
 				self.logger.info('+ Collecting stats for workload '+workload)
@@ -124,9 +123,9 @@ class controls:
 					force_restart=False
 					if setting in self.hbase.viaAmbari.keys():
 						if self.rollBack:
-							self.logger.warn('+ Rolling back to base version before making changes for setting '+currSet+ '+')
+							self.logger.warn('+ Rolling back to base version before making changes for setting +')
 							self.modconf.rollBackConfig(self.rollBack_service,self.base_version) 
-							self.logger.info('- Rolled back to base version before making changes for setting '+currSet+ '-')
+							self.logger.info('- Rolled back to base version before making changes for setting -')
 							force_restart=True
 						self.logger.info('+ Comparing with existing configurations via ambari for '+setting+' +')
 						self.modifySettingsAndRestart(self.hbase.viaAmbari[setting],self.hbase.restarts[setting]['services'],self.hbase.restarts[setting]['components'],force_restart)
