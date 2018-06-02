@@ -6,13 +6,13 @@ from collections import defaultdict
 class hbaseUtil:
 
 	def __init__(self):
-		self.hivetrials=defaultdict(lambda:{})
+		self.hbasetrials=defaultdict(lambda:{})
 		self.viaAmbari=defaultdict(lambda:defaultdict(lambda:{}))
 		self.restarts=defaultdict(lambda:defaultdict(lambda:[]))
 		self.sysMod={}
 
 	def addSettings(self,name,setting):
-		self.hivetrials[name]=setting
+		self.hbasetrials[name]=setting
 
 	def addAmbariConf(self,name,setting):
 		for key in setting.keys():
@@ -25,11 +25,10 @@ class hbaseUtil:
 	def addSysMod(self,name,setting):
 		self.sysMod[name]=setting
 
+	def HbaseLoadCommand(self,setting,workload,binding):
+		return "./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -threads "+self.hbasetrials[setting]["loadthreads"]
+		
 
-	def HbaseCommand(self,setting,workload,runType):
-		if runType.lower()=="load":
-			return "./bin/ycsb load hbase10 -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hivetrials[setting]["records"]+" -threads "+self.hivetrials[setting]["loadthreads"]
-		elif runType.lower()=="run":
-			return "./bin/ycsb run hbase10 -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hivetrials[setting]["records"]+" -p operationcount="+self.hivetrials[setting]['operations']+" -threads "+self.hivetrials[setting]["runthreads"]
+	def HBaseRunCommand(self,setting,workload,binding):
+		return "./bin/ycsb run "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -p operationcount="+self.hbasetrials[setting]['operations']+" -threads "+self.hbasetrials[setting]["runthreads"]
 
-			

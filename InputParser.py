@@ -21,6 +21,9 @@ class parseInput:
 	def workloads(self):
 		return self.params['wrap']['workloads']
 
+	def binding(self):
+		return self.params['wrap']['binding']
+
 	def rollBack(self):
 		return (self.params['wrap']['enableRollBack'].lower()=='true')
 

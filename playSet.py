@@ -116,7 +116,7 @@ class controls:
 					self.logger.info('+Dropping/Recreating Table For Next Run+')
 					self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
 					self.logger.info('-Dropped/Recreated Table For Next Run-')
-					HbaseLoadCmd=self.hbase.HbaseCommand(setting,workload,'load')
+					HbaseLoadCmd=self.hbase.HbaseLoadCommand(setting,workload,self.binding)
 					self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
 					currload=workload
 				if not(currSet) or not(setting==currSet):
@@ -135,7 +135,7 @@ class controls:
 					for toPrint in self.printer:
 						self.logger.info(json.dumps(self.modconf.getConfig(toPrint),indent=4,sort_keys=True))
 					currSet=setting
-				HbaseRunCmd=self.hbase.HbaseCommand(setting,workload,'run')		
+				HbaseRunCmd=self.hbase.HbaseRunCommand(setting,workload,self.binding)		
 				for i in xrange(numRuns):
 					self.runCmd(HbaseRunCmd,setting,workload,'run',str(i))		
 				self.logger.info('- FINISHED EXECUTION '+' '.join([workload,setting])+' -')
@@ -167,6 +167,7 @@ class controls:
 		self.printer=iparse.printer()
 		self.rollBack=iparse.rollBack()
 		self.workloads=iparse.workloads()
+		self.binding=iparse.binding()
 		self.collection=iparse.collectors()
 		self.metricsHost,self.metricsPort=iparse.ametrics()
 		if self.rollBack:
