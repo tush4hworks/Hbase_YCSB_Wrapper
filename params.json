@@ -30,6 +30,7 @@
     "rollBackService":"HBASE",
     "base_version":1,
     "workloads":["workloada","workloadb"],
+    "binding":"hbase10",
     "settings": [
       {
         "config": {
