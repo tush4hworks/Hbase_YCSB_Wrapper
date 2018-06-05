@@ -29,6 +29,6 @@ class hbaseUtil:
 		return "./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -threads "+self.hbasetrials[setting]["loadthreads"]
 		
 
-	def HBaseRunCommand(self,setting,workload,binding):
+	def HbaseRunCommand(self,setting,workload,binding):
 		return "./bin/ycsb run "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -p operationcount="+self.hbasetrials[setting]['operations']+" -threads "+self.hbasetrials[setting]["runthreads"]
 
