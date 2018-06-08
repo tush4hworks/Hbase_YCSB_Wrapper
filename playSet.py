@@ -96,12 +96,14 @@ class controls:
 			self.logger.info('+Waiting for hbase to stabilize....')
 			time.sleep(5)
 			hbase_status=self.sysConf('hbase shell ./list_procedures')
+		self.logger.info(hbase_status)
 		self.logger.info('-No running procedures, continuing....')
 		usertable_status=self.sysConf('hbase shell ./usertablestatus')
 		while not(re.search(r'[1-9]\d*\s+active master.*[1-9]\d*\s+servers.*',usertable_status,re.I)):
 			self.logger.info('+Waiting for usertable to be served....')
 			time.sleep(5)
 			usertable_status=self.sysConf('hbase shell ./usertablestatus')
+		self.logger.info(usertable_status)
 		self.logger.info('-Active master found, continuing execution.....')
 		
 	def modifySettingsAndRestart(self,ambariSetting,services,components,force_restart=False):
@@ -189,6 +191,7 @@ class controls:
 		self.numRuns=iparse.numRuns()
 		self.printer=iparse.printer()
 		self.rollBack=iparse.rollBack()
+		self.distributed=iparse.distributed()
 		self.workloads=iparse.workloads()
 		self.binding=iparse.binding()
 		self.collection=iparse.collectors()

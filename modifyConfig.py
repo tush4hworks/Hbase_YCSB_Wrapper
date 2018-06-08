@@ -105,7 +105,7 @@ class ambariConfig:
 		self.startService(service)
 
 	def getHostsRunningComponent(self,component):
-		return ([item['hostRoles']['host_name'] for item in json.loads(self.commonGet(self.prefix+'/host_components?HostRoles/component_name='+component))['items']])		
+		return ([item['HostRoles']['host_name'] for item in json.loads(self.commonGet(self.prefix+'/host_components?HostRoles/component_name='+component))['items']])		
 		
 	def putConfig(self,config,propDict):
 		currConf=self.getConfig(config)
