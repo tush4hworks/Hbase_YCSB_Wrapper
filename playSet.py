@@ -48,7 +48,7 @@ class controls:
 			self.logger.info('+ Executing command '+cmd)
 			startEpoch=startEpoch=str(int(time.time()*1000))
 			runlog='History/'+'_'.join([setting,workload,runType,run,self.getDateTime()])
-			result=subprocess.check_output(cmd+' >'+runlog,stderr=subprocess.STDOUT,shell=True)
+			result=subprocess.check_output(cmd+' >>'+runlog,stderr=subprocess.STDOUT,shell=True)
 			endEpoch=str(int(time.time()*1000))
 			self.epochdict[workload]=[startEpoch,endEpoch]
 			self.logger.info('- Finished executing command '+cmd)
@@ -92,7 +92,7 @@ class controls:
 
 	def waitTillProceduresRunning(self):
 		hbase_status=self.sysConf(['hbase shell ./list_procedures'])
-		while not(re.search(r'0 row\(s\)',status,re.I)):
+		while not(re.search(r'0 row\(s\)',hbase_status,re.I)):
 			self.logger.info('+Waiting for hbase to stabilize....')
 			time.sleep(5)
 			hbase_status=self.sysConf(['hbase shell ./list_procedures'])
