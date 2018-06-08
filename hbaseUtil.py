@@ -2,6 +2,7 @@ import sys
 import subprocess
 import re
 from collections import defaultdict
+import math
 
 class hbaseUtil:
 
@@ -25,9 +26,16 @@ class hbaseUtil:
 	def addSysMod(self,name,setting):
 		self.sysMod[name]=setting
 
-	def HbaseLoadCommand(self,setting,workload,binding):
-		return "./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -threads "+self.hbasetrials[setting]["loadthreads"]
-		
+	def HbaseLoadCommand(self,setting,workload,binding,regionservers,distributed):
+		if not distributed or not regionservers:
+			return ["./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -threads "+self.hbasetrials[setting]["loadthreads"]]
+		else:
+			cmds=[]
+			segment_size=self.hbasetrials[setting]["records"]/len(regionservers)
+			load_splits=[(int(math.floor(segment*i)),int(math.ceil(segment*(i+1)))) for i in range(len(regionservers))]
+			for i in range(len(load_splits)):
+				cmds.append("ssh root@"+regionservers[i]+" su - hbase -c './bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p insertstart="+load_splits[i]+" -p insertcount="+segment_size+" -threads "+self.hbasetrials[setting]["loadthreads"]+"'")
+			return cmds
 
 	def HbaseRunCommand(self,setting,workload,binding):
 		return "./bin/ycsb run "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -p operationcount="+self.hbasetrials[setting]['operations']+" -threads "+self.hbasetrials[setting]["runthreads"]

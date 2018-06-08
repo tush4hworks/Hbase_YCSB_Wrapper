@@ -27,6 +27,9 @@ class parseInput:
 	def rollBack(self):
 		return (self.params['wrap']['enableRollBack'].lower()=='true')
 
+	def distributed(self):
+		return (self.params['wrap']['enableRollBack'].lower()=='true')
+
 	def base_version(self):
 		return self.params['wrap']['base_version']
 

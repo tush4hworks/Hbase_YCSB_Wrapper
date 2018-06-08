@@ -83,10 +83,26 @@ class controls:
 		for cmd in cmds:
 			try:
 				self.logger.info('+ Running '+cmd+' for setting '+setting)
-				subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
+				result=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
 				self.logger.info('- Finished executing command '+cmd)
+				return result
 			except Exception as e:
 				self.logger.error('- Finished executing command with exception '+cmd)
+				return None
+
+	def waitTillProceduresRunning(self):
+		hbase_status=self.sysConf('hbase shell ./list_procedures')
+		while not(re.search(r'0 row\(s\)',status,re.I)):
+			self.logger.info('+Waiting for hbase to stabilize....')
+			time.sleep(5)
+			hbase_status=self.sysConf('hbase shell ./list_procedures')
+		self.logger.info('-No running procedures, continuing....')
+		usertable_status=self.sysConf('hbase shell ./usertablestatus')
+		while not(re.search(r'[1-9]\d*\s+active master.*[1-9]\d*\s+servers.*',usertable_status,re.I)):
+			self.logger.info('+Waiting for usertable to be served....')
+			time.sleep(5)
+			usertable_status=self.sysConf('hbase shell ./usertablestatus')
+		self.logger.info('-Active master found, continuing execution.....')
 		
 	def modifySettingsAndRestart(self,ambariSetting,services,components,force_restart=False):
 		"""Calling ambari API to change configuration and restart services/components"""
@@ -116,8 +132,14 @@ class controls:
 					self.logger.info('+Dropping/Recreating Table For Next Run+')
 					self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
 					self.logger.info('-Dropped/Recreated Table For Next Run-')
-					HbaseLoadCmd=self.hbase.HbaseLoadCommand(setting,workload,self.binding)
-					self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
+					HbaseLoadCmds=self.hbase.HbaseLoadCommand(setting,workload,self.binding,self.modconf.getHostsRunningComponent('HBASE_REGIONSERVER'),distributed=self.distributed)
+					loadthreads=[]
+					for HbaseLoadCmd in HbaseLoadCmds:
+						loadthreads.append(threading.Thread(target=self.runCmd,args=[HbaseLoadCmd,setting,workload,'load','0']))
+					for loadthread in loadthreads:
+						loadthread.start()
+					for loadthread in loadthreads:
+						loadthread.join()
 					currload=workload
 				if not(currSet) or not(setting==currSet):
 					force_restart=False
@@ -129,6 +151,7 @@ class controls:
 							force_restart=True
 						self.logger.info('+ Comparing with existing configurations via ambari for '+setting+' +')
 						self.modifySettingsAndRestart(self.hbase.viaAmbari[setting],self.hbase.restarts[setting]['services'],self.hbase.restarts[setting]['components'],force_restart)
+						self.waitTillProceduresRunning()
 					if setting in self.hbase.sysMod.keys():
 						self.sysConf(self.hbase.sysMod[setting],setting)
 					self.logger.info('Starting execution with below configurations for '+setting)

@@ -31,6 +31,7 @@
     "base_version":1,
     "workloads":["workloada","workloadb"],
     "binding":"hbase10",
+    "distributed":"false",
     "settings": [
       {
         "config": {
