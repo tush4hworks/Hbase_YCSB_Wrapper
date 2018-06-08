@@ -79,7 +79,7 @@ class controls:
 		except Exception as e:
 			self.logger.info(e.__str__())
 
-	def sysConf(self,cmds,setting):
+	def sysConf(self,cmds,setting=''):
 		for cmd in cmds:
 			try:
 				self.logger.info('+ Running '+cmd+' for setting '+setting)
@@ -91,18 +91,18 @@ class controls:
 				return None
 
 	def waitTillProceduresRunning(self):
-		hbase_status=self.sysConf('hbase shell ./list_procedures')
+		hbase_status=self.sysConf(['hbase shell ./list_procedures'])
 		while not(re.search(r'0 row\(s\)',status,re.I)):
 			self.logger.info('+Waiting for hbase to stabilize....')
 			time.sleep(5)
-			hbase_status=self.sysConf('hbase shell ./list_procedures')
+			hbase_status=self.sysConf(['hbase shell ./list_procedures'])
 		self.logger.info(hbase_status)
 		self.logger.info('-No running procedures, continuing....')
-		usertable_status=self.sysConf('hbase shell ./usertablestatus')
+		usertable_status=self.sysConf(['hbase shell ./usertablestatus'])
 		while not(re.search(r'[1-9]\d*\s+active master.*[1-9]\d*\s+servers.*',usertable_status,re.I)):
 			self.logger.info('+Waiting for usertable to be served....')
 			time.sleep(5)
-			usertable_status=self.sysConf('hbase shell ./usertablestatus')
+			usertable_status=self.sysConf(['hbase shell ./usertablestatus'])
 		self.logger.info(usertable_status)
 		self.logger.info('-Active master found, continuing execution.....')
 		

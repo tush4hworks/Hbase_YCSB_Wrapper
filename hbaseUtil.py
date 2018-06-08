@@ -32,7 +32,7 @@ class hbaseUtil:
 		else:
 			cmds=[]
 			segment_size=int(self.hbasetrials[setting]["records"])/len(regionservers)
-			load_splits=[(int(math.floor(segment*i)),int(math.ceil(segment*(i+1)))) for i in range(len(regionservers))]
+			load_splits=[(int(math.floor(segment_size*i)),int(math.ceil(segment_size*(i+1)))) for i in range(len(regionservers))]
 			for i in range(len(load_splits)):
 				cmds.append("ssh root@"+regionservers[i]+" 'su - hbase -c ./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p insertstart="+str(load_splits[i][0])+" -p insertcount="+str(segment_size)+" -threads "+self.hbasetrials[setting]["loadthreads"]+"'")
 			return cmds
