@@ -30,6 +30,9 @@ class parseInput:
 	def distributed(self):
 		return (self.params['wrap']['distributed'].lower()=='true')
 
+	def runconf(self):
+		return self.params['wrap']['runconf']
+
 	def base_version(self):
 		return self.params['wrap']['base_version']
 

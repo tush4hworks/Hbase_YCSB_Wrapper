@@ -92,7 +92,7 @@ class controls:
 
 	def waitTillProceduresRunning(self):
 		hbase_status=self.sysConf(['hbase shell ./list_procedures'])
-		while not(re.search(r'0 row\(s\)',hbase_status,re.I)):
+		while not(re.search(r'\n0 row\(s\)',hbase_status,re.I)):
 			self.logger.info('+Waiting for hbase to stabilize....')
 			time.sleep(5)
 			hbase_status=self.sysConf(['hbase shell ./list_procedures'])
@@ -194,6 +194,7 @@ class controls:
 		self.distributed=iparse.distributed()
 		self.workloads=iparse.workloads()
 		self.binding=iparse.binding()
+		self.hbase.runconf=iparse.runconf()
 		self.collection=iparse.collectors()
 		self.metricsHost,self.metricsPort=iparse.ametrics()
 		if self.rollBack:

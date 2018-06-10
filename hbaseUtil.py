@@ -8,6 +8,7 @@ class hbaseUtil:
 
 	def __init__(self):
 		self.hbasetrials=defaultdict(lambda:{})
+		self.runconf={}
 		self.viaAmbari=defaultdict(lambda:defaultdict(lambda:{}))
 		self.restarts=defaultdict(lambda:defaultdict(lambda:[]))
 		self.sysMod={}
@@ -28,15 +29,15 @@ class hbaseUtil:
 
 	def HbaseLoadCommand(self,setting,workload,binding,regionservers,distributed):
 		if not distributed or not regionservers:
-			return ["./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -threads "+self.hbasetrials[setting]["loadthreads"]]
+			return ["./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.runconf["records"]+" -threads "+self.runconf["loadthreads"]]
 		else:
 			cmds=[]
-			segment_size=int(self.hbasetrials[setting]["records"])/len(regionservers)
+			segment_size=int(self.runconf["records"])/len(regionservers)
 			load_splits=[(int(math.floor(segment_size*i)),int(math.ceil(segment_size*(i+1)))) for i in range(len(regionservers))]
 			for i in range(len(load_splits)):
-				cmds.append("ssh -o stricthostkeychecking=no root@"+regionservers[i]+" 'su - hbase -c \"./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p insertstart="+str(load_splits[i][0])+" -p insertcount="+str(segment_size)+" -threads "+self.hbasetrials[setting]["loadthreads"]+"\"'")
+				cmds.append("ssh -o stricthostkeychecking=no root@"+regionservers[i]+" 'su - hbase -c \"./bin/ycsb load "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p insertstart="+str(load_splits[i][0])+" -p insertcount="+str(segment_size)+" -threads "+self.runconf["loadthreads"]+"\"'")
 			return cmds
 
 	def HbaseRunCommand(self,setting,workload,binding):
-		return "./bin/ycsb run "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.hbasetrials[setting]["records"]+" -p operationcount="+self.hbasetrials[setting]['operations']+" -threads "+self.hbasetrials[setting]["runthreads"]
+		return "./bin/ycsb run "+binding+" -P ./workloads/"+workload+" -p columnfamily=cf -p hbase.zookeeper.znode.parent=/hbase-unsecure -p recordcount="+self.runconf["records"]+" -p operationcount="+self.runconf["operations"]+" -threads "+self.runconf["runthreads"]
 
