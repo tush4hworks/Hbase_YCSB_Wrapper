@@ -82,7 +82,7 @@ class controls:
 	def sysConf(self,cmds,setting=''):
 		for cmd in cmds:
 			try:
-				self.logger.info('+ Running '+cmd+' for setting '+setting)
+				self.logger.info('+ Running '+cmd)
 				result=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
 				self.logger.info('- Finished executing command '+cmd)
 				return result
@@ -171,8 +171,6 @@ class controls:
 
 	def addHbaseSettings(self,name,runSettings):
 		"""Segregate settings and add"""
-		if 'runconf' in runSettings.keys():
-			self.hbase.addSettings(name,runSettings['runconf'])
 		if 'ambari' in runSettings.keys():
 			self.hbase.addAmbariConf(name,runSettings['ambari'])
 		if 'restart' in runSettings.keys():
