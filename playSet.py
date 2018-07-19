@@ -11,6 +11,7 @@ import modifyConfig
 import InputParser
 import datetime
 import time
+import glob
 import collect_metrics
 
 class controls:
@@ -29,6 +30,16 @@ class controls:
 		if epochT:
 			return str(int(time.time()))
 		return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+	def dumpResults():
+		f=open('hbaseresults_{}'.format(self.getDateTime()),'a+')
+		alls=sorted(glob.glob('History/*'))
+		for regex in self.hbaseconfs:
+	        fls=[name for name in alls if ('run' in name and regex in name)]
+	        f.write(regex+'\n')
+	        f.write(','.join(fls)+'\n')
+	        f.write(','.join(['"'+re.sub(',','',open(fl,'r+').read())+'"' for fl in fls])+'\n')
+	    f.close()
 
 	def collectResults(self,runlog,setting,workload):
 		try:
@@ -199,4 +210,5 @@ if __name__=='__main__':
 	C=controls('params.json')
 	C.runTests(C.hbaseconfs,C.workloads,C.numRuns)
 	C.statCollection(C.epochdict)
+	C.dumpResults()
 	
