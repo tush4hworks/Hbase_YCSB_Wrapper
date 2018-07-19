@@ -37,11 +37,6 @@ class controls:
 		except Exception as e:
 			self.logger.info('- Exception in collecting results')
 
-	def dumpResults(self):
-		with open('results_{}.csv'.format(self.getDateTime()),'w+') as f:
-			for setting in self.results.keys():
-				f.write(','.join([setting,','.join([','.join(setting[workload]) for workload in sorted(self.results[setting].keys())])])+'\n')
-
 	def runCmd(self,cmd,setting,workload,runType,run):
 		"""Wrapper to run shell"""
 		try:
@@ -79,30 +74,29 @@ class controls:
 		except Exception as e:
 			self.logger.info(e.__str__())
 
-	def sysConf(self,cmds,setting=''):
-		for cmd in cmds:
-			try:
-				self.logger.info('+ Running '+cmd)
-				result=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
-				self.logger.info('- Finished executing command '+cmd)
-				return result
-			except Exception as e:
-				self.logger.error('- Finished executing command with exception '+cmd)
-				return None
+	def sysConf(self,cmd,setting=''):
+		try:
+			self.logger.info('+ Running '+cmd)
+			result=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
+			self.logger.info('- Finished executing command '+cmd)
+			return result
+		except Exception as e:
+			self.logger.error('- Finished executing command with exception '+cmd)
+			return None
 
 	def waitTillProceduresRunning(self):
-		hbase_status=self.sysConf(['hbase shell ./list_procedures'])
+		hbase_status=self.sysConf('hbase shell ./list_procedures')
 		while not(re.search(r'\n0 row\(s\)',hbase_status,re.I)):
 			self.logger.info('+Waiting for hbase to stabilize....')
 			time.sleep(5)
-			hbase_status=self.sysConf(['hbase shell ./list_procedures'])
+			hbase_status=self.sysConf('hbase shell ./list_procedures')
 		self.logger.info(hbase_status)
 		self.logger.info('-No running procedures, continuing....')
-		usertable_status=self.sysConf(['hbase shell ./usertablestatus'])
+		usertable_status=self.sysConf('hbase shell ./usertablestatus')
 		while not(re.search(r'[1-9]\d*\s+active master.*[1-9]\d*\s+servers.*',usertable_status,re.I)):
 			self.logger.info('+Waiting for usertable to be served....')
 			time.sleep(5)
-			usertable_status=self.sysConf(['hbase shell ./usertablestatus'])
+			usertable_status=self.sysConf('hbase shell ./usertablestatus')
 		self.logger.info(usertable_status)
 		self.logger.info('-Active master found, continuing execution.....')
 		
@@ -155,7 +149,8 @@ class controls:
 						self.modifySettingsAndRestart(self.hbase.viaAmbari[setting],self.hbase.restarts[setting]['services'],self.hbase.restarts[setting]['components'],force_restart)
 						self.waitTillProceduresRunning()
 					if setting in self.hbase.sysMod.keys():
-						self.sysConf(self.hbase.sysMod[setting],setting)
+						for syscmd in self.hbase.sysMod[setting]:
+							self.sysConf(syscmd,setting)
 					self.logger.info('Starting execution with below configurations for '+setting)
 					for toPrint in self.printer:
 						self.logger.info(json.dumps(self.modconf.getConfig(toPrint),indent=4,sort_keys=True))
@@ -167,7 +162,6 @@ class controls:
 			except Exception as e:
 				self.logger.error(e.__str__())
 				self.logger.warn('- FINISHED EXECUTION WITH EXCEPTION'+' '.join([workload,setting])+' -')
-
 
 	def addHbaseSettings(self,name,runSettings):
 		"""Segregate settings and add"""
@@ -201,10 +195,8 @@ class controls:
 		for setting in iparse.specified_settings():
 			self.addHbaseSettings(setting['name'],setting['config'])
 	
-
 if __name__=='__main__':
 	C=controls('params.json')
 	C.runTests(C.hbaseconfs,C.workloads,C.numRuns)
 	C.statCollection(C.epochdict)
-	C.dumpResults()
 	
