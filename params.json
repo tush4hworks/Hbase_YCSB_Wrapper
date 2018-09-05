@@ -30,6 +30,15 @@
     "rollBackService":"HBASE",
     "base_version":1,
     "workloads":["workloada","workloadb"],
+    "binding":"hbase10",
+    "runconf":
+    {
+        "records":"300000000",
+        "operations":"10000000",
+        "runthreads":"400",
+        "loadthreads":"40"
+    },
+    "distributed":"false",
     "settings": [
       {
         "config": {
@@ -38,12 +47,6 @@
               "hbase.hregion.memstore.block.multiplier": "4"
             }
           },
-          "runconf":{
-              "records":"300000000",
-              "operations":"10000000",
-              "runthreads":"400",
-              "loadthreads":"40"
-            },
           "system":["cp /etc/hbase/conf/hbase-site.xml hbase10/conf"],
           "restart": {
             "components": [
@@ -61,12 +64,6 @@
             }
           },
           "system":["cp /etc/hbase/conf/hbase-site.xml hbase10/conf"],
-          "runconf":{
-            "records":"300000000",
-              "operations":"10000000",
-              "runthreads":"400",
-              "loadthreads":"40"
-            },
           "restart": {
             "components": [
             ],

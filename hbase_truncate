@@ -1,0 +1,4 @@
+disable 'usertable'
+drop 'usertable'
+create 'usertable', 'cf', {SPLITS => (1..1000).map {|i| "user#{1000+i*(9999-1000)/1000}"}}
+exit

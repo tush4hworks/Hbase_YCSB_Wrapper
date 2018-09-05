@@ -11,6 +11,7 @@ import modifyConfig
 import InputParser
 import datetime
 import time
+import glob
 import collect_metrics
 
 class controls:
@@ -30,18 +31,22 @@ class controls:
 			return str(int(time.time()))
 		return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-	def collectResults(self,runlog):
+	def dumpResults():
+		f=open('hbaseresults_{}'.format(self.getDateTime()),'a+')
+		alls=sorted(glob.glob('History/*'))
+		for regex in self.hbaseconfs:
+	        fls=[name for name in alls if ('run' in name and regex in name)]
+	        f.write(regex+'\n')
+	        f.write(','.join(fls)+'\n')
+	        f.write(','.join(['"'+re.sub(',','',open(fl,'r+').read())+'"' for fl in fls])+'\n')
+	    f.close()
+
+	def collectResults(self,runlog,setting,workload):
 		try:
 			with open(runlog,'r+') as f:
 				self.results[setting][workload].append('\n'.join(f.readlines()[:19]))
 		except Exception as e:
 			self.logger.info('- Exception in collecting results')
-
-	def dumpResults(self):
-		with open('results_{}.csv'.format(self.getDateTime()),'w+') as f:
-			f.write(','.join([setting]+sorted(settings.keys())*self.numRuns)+'\n')
-			for setting in self.results.keys():
-				f.write(','.join([setting,','.join([','.join(setting[workload]) for workload in sorted(self.results[setting].keys())])])+'\n')
 
 	def runCmd(self,cmd,setting,workload,runType,run):
 		"""Wrapper to run shell"""
@@ -49,11 +54,11 @@ class controls:
 			self.logger.info('+ Executing command '+cmd)
 			startEpoch=startEpoch=str(int(time.time()*1000))
 			runlog='History/'+'_'.join([setting,workload,runType,run,self.getDateTime()])
-			result=subprocess.check_output(cmd+' >'+runlog,stderr=subprocess.STDOUT,shell=True)
+			result=subprocess.check_output(cmd+' >>'+runlog,stderr=subprocess.STDOUT,shell=True)
 			endEpoch=str(int(time.time()*1000))
 			self.epochdict[workload]=[startEpoch,endEpoch]
 			self.logger.info('- Finished executing command '+cmd)
-			self.collectResults(runlog)
+			self.collectResults(runlog,setting,workload)
 		except Exception as e:
 			self.logger.error('- Finished executing command with exception '+cmd)
 			endEpoch=str(int(time.time()*1000))
@@ -80,14 +85,31 @@ class controls:
 		except Exception as e:
 			self.logger.info(e.__str__())
 
-	def sysConf(self,cmds,setting):
-		for cmd in cmds:
-			try:
-				self.logger.info('+ Running '+cmd+' for setting '+setting)
-				subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
-				self.logger.info('- Finished executing command '+cmd)
-			except Exception as e:
-				self.logger.error('- Finished executing command with exception '+cmd)
+	def sysConf(self,cmd,setting=''):
+		try:
+			self.logger.info('+ Running '+cmd)
+			result=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
+			self.logger.info('- Finished executing command '+cmd)
+			return result
+		except Exception as e:
+			self.logger.error('- Finished executing command with exception '+cmd)
+			return None
+
+	def waitTillProceduresRunning(self):
+		hbase_status=self.sysConf('hbase shell ./list_procedures')
+		while not(re.search(r'\n0 row\(s\)',hbase_status,re.I)):
+			self.logger.info('+Waiting for hbase to stabilize....')
+			time.sleep(5)
+			hbase_status=self.sysConf('hbase shell ./list_procedures')
+		self.logger.info(hbase_status)
+		self.logger.info('-No running procedures, continuing....')
+		usertable_status=self.sysConf('hbase shell ./usertablestatus')
+		while not(re.search(r'[1-9]\d*\s+active master.*[1-9]\d*\s+servers.*',usertable_status,re.I)):
+			self.logger.info('+Waiting for usertable to be served....')
+			time.sleep(5)
+			usertable_status=self.sysConf('hbase shell ./usertablestatus')
+		self.logger.info(usertable_status)
+		self.logger.info('-Active master found, continuing execution.....')
 		
 	def modifySettingsAndRestart(self,ambariSetting,services,components,force_restart=False):
 		"""Calling ambari API to change configuration and restart services/components"""
@@ -109,43 +131,51 @@ class controls:
 	def runTests(self,settings,workloads,numRuns):
 		"""Main entry function to run TPCDS suite"""
 		currSet=None
-		for setting,workload in list(itertools.product(settings,workloads)):
+		currload=None
+		for workload,setting in list(itertools.product(workloads,settings)):
 			try:
 				self.logger.info('+ BEGIN EXECUTION '+' '.join([workload,setting])+' +')
+				if not currload or not(currload==workload):
+					self.logger.info('+Dropping/Recreating Table For Next Run+')
+					self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
+					self.logger.info('-Dropped/Recreated Table For Next Run-')
+					HbaseLoadCmds=self.hbase.HbaseLoadCommand(setting,workload,self.binding,self.modconf.getHostsRunningComponent('HBASE_REGIONSERVER'),distributed=self.distributed)
+					loadthreads=[]
+					for HbaseLoadCmd in HbaseLoadCmds:
+						loadthreads.append(threading.Thread(target=self.runCmd,args=[HbaseLoadCmd,setting,workload,'load','0']))
+					for loadthread in loadthreads:
+						loadthread.start()
+					for loadthread in loadthreads:
+						loadthread.join()
+					currload=workload
 				if not(currSet) or not(setting==currSet):
 					force_restart=False
 					if setting in self.hbase.viaAmbari.keys():
-						if currSet and self.rollBack:
-							self.logger.warn('+ Rolling back to base version before making changes for setting '+currSet+ '+')
+						if self.rollBack:
+							self.logger.warn('+ Rolling back to base version before making changes for setting +')
 							self.modconf.rollBackConfig(self.rollBack_service,self.base_version) 
-							self.logger.info('- Rolled back to base version before making changes for setting '+currSet+ '-')
+							self.logger.info('- Rolled back to base version before making changes for setting -')
 							force_restart=True
 						self.logger.info('+ Comparing with existing configurations via ambari for '+setting+' +')
 						self.modifySettingsAndRestart(self.hbase.viaAmbari[setting],self.hbase.restarts[setting]['services'],self.hbase.restarts[setting]['components'],force_restart)
+						self.waitTillProceduresRunning()
 					if setting in self.hbase.sysMod.keys():
-						self.sysConf(self.hbase.sysMod[setting],setting)
+						for syscmd in self.hbase.sysMod[setting]:
+							self.sysConf(syscmd,setting)
 					self.logger.info('Starting execution with below configurations for '+setting)
 					for toPrint in self.printer:
 						self.logger.info(json.dumps(self.modconf.getConfig(toPrint),indent=4,sort_keys=True))
 					currSet=setting
-				HbaseLoadCmd=self.hbase.HbaseCommand(setting,workload,'load')
-				HbaseRunCmd=self.hbase.HbaseCommand(setting,workload,'run')
-				self.runCmd(HbaseLoadCmd,setting,workload,'load','0')
+				HbaseRunCmd=self.hbase.HbaseRunCommand(setting,workload,self.binding)		
 				for i in xrange(numRuns):
-					self.runCmd(HbaseRunCmd,setting,workload,'run',str(i))
-				self.logger.info('+Dropping/Recreating Table For Next Run+')
-				self.runCmd('hbase shell ./hbase_truncate',setting,workload,'cleanup','0')
-				self.logger.info('-Dropped/Recreated Table For Next Run-')
+					self.runCmd(HbaseRunCmd,setting,workload,'run',str(i))		
 				self.logger.info('- FINISHED EXECUTION '+' '.join([workload,setting])+' -')
 			except Exception as e:
 				self.logger.error(e.__str__())
 				self.logger.warn('- FINISHED EXECUTION WITH EXCEPTION'+' '.join([workload,setting])+' -')
 
-
 	def addHbaseSettings(self,name,runSettings):
 		"""Segregate settings and add"""
-		if 'runconf' in runSettings.keys():
-			self.hbase.addSettings(name,runSettings['runconf'])
 		if 'ambari' in runSettings.keys():
 			self.hbase.addAmbariConf(name,runSettings['ambari'])
 		if 'restart' in runSettings.keys():
@@ -164,7 +194,10 @@ class controls:
 		self.numRuns=iparse.numRuns()
 		self.printer=iparse.printer()
 		self.rollBack=iparse.rollBack()
+		self.distributed=iparse.distributed()
 		self.workloads=iparse.workloads()
+		self.binding=iparse.binding()
+		self.hbase.runconf=iparse.runconf()
 		self.collection=iparse.collectors()
 		self.metricsHost,self.metricsPort=iparse.ametrics()
 		if self.rollBack:
@@ -173,7 +206,6 @@ class controls:
 		for setting in iparse.specified_settings():
 			self.addHbaseSettings(setting['name'],setting['config'])
 	
-
 if __name__=='__main__':
 	C=controls('params.json')
 	C.runTests(C.hbaseconfs,C.workloads,C.numRuns)

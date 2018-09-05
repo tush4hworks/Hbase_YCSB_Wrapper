@@ -21,8 +21,17 @@ class parseInput:
 	def workloads(self):
 		return self.params['wrap']['workloads']
 
+	def binding(self):
+		return self.params['wrap']['binding']
+
 	def rollBack(self):
 		return (self.params['wrap']['enableRollBack'].lower()=='true')
+
+	def distributed(self):
+		return (self.params['wrap']['distributed'].lower()=='true')
+
+	def runconf(self):
+		return self.params['wrap']['runconf']
 
 	def base_version(self):
 		return self.params['wrap']['base_version']
